@@ -337,9 +337,9 @@ namespace Glow_Up.Services.BlackHat
             return existingLike != null;
         }
 
-        public async Task<BHPostToReturnDto> GetMostPopularPostAsync(CancellationToken cancellationToken = default)
+        public Task<BHPostToReturnDto> GetMostPopularPostAsync(CancellationToken cancellationToken = default)
         {
-          throw new NotImplementedException();
+            throw new NotImplementedException();
         }
     }
 }
