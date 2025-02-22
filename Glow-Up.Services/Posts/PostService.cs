@@ -1,0 +1,469 @@
+﻿using Glow_Up.Core.DTOs.Post;
+using Glow_Up.Core.Enums;
+using Glow_Up.Core.Models;
+using Glow_Up.Core.Repositories;
+using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Posts;
+using Glow_Up.Core.Specifications.FavPosts_Spec;
+using Glow_Up.Core.Specifications.Post_Spec;
+using Glow_Up.Core.Specifications.SharedPosts_Spec;
+using Glow_Up.Services.Helpers;
+using Microsoft.AspNetCore.Hosting;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Glow_Up.Services.Posts
+{
+    public class PostService : IPostService
+    {
+        private readonly IFileUploadService _fileUploadService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public PostService(IFileUploadService fileUploadService, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        {
+            _fileUploadService = fileUploadService;
+            _unitOfWork = unitOfWork;
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+
+        public async Task<bool> AddReactionAsync(int postId, AddReactionDto dto)
+        {
+            var post = await _unitOfWork.Repository<Post>().GetByIdAsync(postId);
+
+            if (post == null)
+            {
+                throw new Exception("Post Not founded!");
+            }
+
+            var user = await _unitOfWork.Repository<User>().GetByIdAsync(dto.UserId);
+
+            if (user == null)
+                throw new Exception($"User Not founded with this Id {dto.UserId}");
+
+
+            if (!Enum.TryParse(dto.ReactType, out ReactType reactionType))
+            {
+                throw new Exception("Invalid reaction type.");
+            }
+
+            // Check if the user has already reacted to the post
+
+            var existingReaction = await _unitOfWork.Repository<Reaction>()
+                .FirstOrDefaultAsync(r => r.PostId == postId && r.UserId == dto.UserId);
+
+            if (existingReaction != null)
+            {
+
+                existingReaction.Type = reactionType;
+                _unitOfWork.Repository<Reaction>().Update(existingReaction);
+            }
+            else
+            {
+                var reaction = new Reaction
+                {
+                    PostId = postId,
+                    UserId = dto.UserId,
+                    Type = reactionType
+                };
+
+                _unitOfWork.Repository<Reaction>().Add(reaction);
+            }
+
+            // Save changes to the database
+
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+            {
+                throw new Exception("An error occurred while adding the reaction.");
+            }
+
+            return true;
+
+        }
+
+        public async Task<PostToReturnDto> CreateNewPostAsync(int userId, CreatePostDto dto)
+        {
+            if (dto == null) throw new Exception("Input cannot be empty.");
+
+            var user = await _unitOfWork.Repository<User>().GetByIdAsync(userId);
+
+            if (user == null)
+                throw new Exception($"User Not founded with this Id {userId}");
+
+            var post = new Post
+            {
+                Caption = dto.Caption,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+            };
+
+            _unitOfWork.Repository<Post>().Add(post);
+
+            int postSaveResult = await _unitOfWork.CompleteAsync();
+
+            if (postSaveResult <= 0)
+                throw new Exception("An error occurred while saving the post.");
+
+            // Save media files
+
+            var mediaItems = new List<Media>();
+            var mediaUrls = new List<string>();
+
+            if (dto.MediaFiles.Any())
+            {
+                foreach (var file in dto.MediaFiles)
+                {
+                    if (file.Length > 0)
+                    {
+                        var fileUrl = await _fileUploadService.UploadFileAsync(file, "posts");
+
+                        var media = new Media
+                        {
+                            Url = fileUrl,
+                            Type = Helper.GetMediaType(file.ContentType),
+                            CreatedAt = DateTime.Now,
+                            PostId = post.Id
+                        };
+
+                        mediaItems.Add(media);
+                        mediaUrls.Add(fileUrl);
+                    }
+                }
+
+                await _unitOfWork.Repository<Media>().AddRange(mediaItems);
+                int mediaSaveResult = await _unitOfWork.CompleteAsync();
+
+                if (mediaSaveResult <= 0)
+                    throw new Exception("An error occurred while saving media files.");
+
+            }
+
+            return new PostToReturnDto
+            {
+                PostId = post.Id,
+                Caption = post.Caption,
+                FilesUrls = mediaUrls
+            };
+
+        }
+
+        public async Task<bool> DeletePostAsync(int postId)
+        {
+            if (postId <= 0)
+                throw new Exception($"Invalid {postId}");
+
+            var spec = new PostWithMediaSpecification(postId);
+
+            var post = await _unitOfWork.Repository<Post>().GetByIdWithSpecAsync(spec);
+
+            if (post == null)
+                throw new Exception("Post not founded");
+
+            // Delete media files
+
+            if (post.MediaItems != null && post.MediaItems.Any())
+            {
+                foreach (var media in post.MediaItems)
+                {
+                    if (!string.IsNullOrEmpty(media.Url))
+                    {
+                        var filePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "posts", media.Url);
+
+                        filePath = $"wwwroot{filePath}";
+
+                        if (File.Exists(filePath))
+                            File.Delete(filePath);
+                    }
+                }
+            }
+
+
+            _unitOfWork.Repository<Post>().Delete(post);
+
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+                throw new Exception("An error occurred while Deleting post.");
+
+
+            return true;
+        }
+
+        public async Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(string? feel = null)
+        {
+            ///var spec = new GetPostsSpecification(feel);
+            ///
+            ///var posts = await _unitOfWork.Repository<Post>().GetAllWithSpecAsync(spec);
+            ///
+            ///if (posts == null || !posts.Any())
+            ///    throw new Exception("No Posts founded");
+            ///
+            ///return posts.Select(post => new FeedDto
+            ///{
+            ///    PostId = post.Id,
+            ///    Caption = post.Caption,
+            ///    FilesUrls = post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+            ///
+            ///    UserId = post.User.Id,
+            ///    UserName = $"{post.User.FirstName} {post.User.LastName}",
+            ///    UserImage = post.User.ProfilePic,
+            ///
+            ///    ReactionsCount = post.Reactions?.Count ?? 0,
+            ///    CommentsCount = post.Comments?.Count ?? 0,
+            ///    Date = Helper.FormatDate(post.CreatedAt),
+            ///
+            ///    SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == sp.Post.Id).Result
+            ///
+            ///}).ToList().AsReadOnly();
+            ///
+
+            var spec = new GetPostsSpecification(feel);
+
+            var posts = await _unitOfWork.Repository<Post>().GetAllWithSpecAsync(spec);
+
+            var sharedPostsSpec = new SharedPostsSpecification();
+
+            var sharedPosts = await _unitOfWork.Repository<SharedPost>().GetAllWithSpecAsync(sharedPostsSpec);
+
+            var allPosts = posts.Select(post => new FeedDto
+            {
+                PostId = post.Id,
+                Caption = post.Caption,
+                FilesUrls = post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = post.User.Id,
+                UserName = $"{post.User.FirstName} {post.User.LastName}",
+                UserImage = post.User.ProfilePic,
+                ReactionsCount = post.Reactions?.Count ?? 0,
+                CommentsCount = post.Comments?.Count ?? 0,
+                SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == post.Id).Result,
+                Date = Helper.FormatDate(post.CreatedAt),
+                IsShared = false
+
+            }).ToList();
+
+            allPosts.AddRange(sharedPosts.Select(sp => new FeedDto
+            {
+                PostId = sp.Post.Id,
+                Caption = sp.Post.Caption,
+                FilesUrls = sp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = sp.Post.User.Id,
+                UserName = $"{sp.Post.User.FirstName} {sp.Post.User.LastName}",
+                UserImage = sp.Post.User.ProfilePic,
+                ReactionsCount = sp.Post.Reactions?.Count ?? 0,
+                CommentsCount = sp.Post.Comments?.Count ?? 0,
+                SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == sp.Post.Id).Result,
+                Date = Helper.FormatDate(sp.Post.CreatedAt),
+                IsShared = true
+
+            }));
+
+            return allPosts.OrderByDescending(p => p.Date).ToList().AsReadOnly();
+        }
+
+
+        public async Task<IReadOnlyList<PostToReturnDto>> GetPostsByUserAsync(int userId)
+        {
+
+            ///if (userId <= 0)
+            ///    throw new Exception($"Invalid UserId {userId}");
+            ///
+            ///var spec = new PostsByUserSpecification(userId);
+            ///
+            ///var posts = await _unitOfWork.Repository<Post>().GetAllWithSpecAsync(spec);
+            ///
+            ///if (posts == null || !posts.Any())
+            ///    throw new Exception("No Posts founded");
+            ///
+            ///return posts.Select(post => new PostToReturnDto
+            ///{
+            ///    PostId = post.Id,
+            ///    Caption = post.Caption,
+            ///    FilesUrls = post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+            ///    UserId = post.User.Id,
+            ///    UserName = $"{post.User.FirstName} {post.User.LastName}",
+            ///    UserImage = post.User.ProfilePic,
+            ///    ReactionsCount = post.Reactions?.Count ?? 0,
+            ///    CommentsCount = post.Comments?.Count ?? 0,
+            ///    Date = Helper.FormatDate(post.CreatedAt)
+            ///
+            ///}).ToList().AsReadOnly();
+
+            var spec = new PostsByUserSpecification(userId);
+
+            var posts = await _unitOfWork.Repository<Post>().GetAllWithSpecAsync(spec);
+
+            var sharedPostsSpec = new SharedPostsByUserSpecification(userId);
+
+            var sharedPosts = await _unitOfWork.Repository<SharedPost>().GetAllWithSpecAsync(sharedPostsSpec);
+
+            var allPosts = posts.Select(post => new PostToReturnDto
+            {
+                PostId = post.Id,
+                Caption = post.Caption,
+                FilesUrls = post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = post.User.Id,
+                UserName = $"{post.User.FirstName} {post.User.LastName}",
+                UserImage = post.User.ProfilePic,
+                ReactionsCount = post.Reactions?.Count ?? 0,
+                CommentsCount = post.Comments?.Count ?? 0,
+                SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == post.Id).Result,
+                Date = Helper.FormatDate(post.CreatedAt),
+                IsShared = false
+
+            }).ToList();
+
+            allPosts.AddRange(sharedPosts.Select(sp => new PostToReturnDto
+            {
+                PostId = sp.Post.Id,
+                Caption = sp.Post.Caption,
+                FilesUrls = sp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = sp.Post.User.Id,
+                UserName = $"{sp.Post.User.FirstName} {sp.Post.User.LastName}",
+                UserImage = sp.Post.User.ProfilePic,
+                ReactionsCount = sp.Post.Reactions?.Count ?? 0,
+                CommentsCount = sp.Post.Comments?.Count ?? 0,
+                SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == sp.Post.Id).Result,
+                Date = Helper.FormatDate(sp.Post.CreatedAt),
+                IsShared = true
+
+            }));
+
+            return allPosts.OrderByDescending(p => p.Date).ToList().AsReadOnly();
+
+        }
+
+        public async Task<bool> AddFavoritePostAsync(int userId, int postId)
+        {
+            var favoritePost = new FavoritePost
+            {
+                UserId = userId,
+                PostId = postId
+            };
+
+            _unitOfWork.Repository<FavoritePost>().Add(favoritePost);
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+            {
+                throw new Exception("An error occurred while adding the post to favorites.");
+            }
+
+            return true;
+        }
+
+        public async Task<IReadOnlyList<PostToReturnDto>> GetFavoritePostsAsync(int userId)
+        {
+            var spec = new FavoritePostsSpecification(userId);
+
+            var favoritePosts = await _unitOfWork.Repository<FavoritePost>().GetAllWithSpecAsync(spec);
+
+            if (favoritePosts == null || !favoritePosts.Any())
+            {
+                throw new Exception("No favorite posts found.");
+            }
+
+            return favoritePosts.Select(fp => new PostToReturnDto
+            {
+                PostId = fp.Post.Id,
+                Caption = fp.Post.Caption,
+                CommentsCount = fp.Post.Comments?.Count ?? 0,
+                ReactionsCount = fp.Post.Reactions?.Count ?? 0,
+                SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == fp.Post.Id).Result,
+                Date = Helper.FormatDate(fp.Post.CreatedAt),
+                UserId = fp.Post.User.Id,
+                IsShared = false,
+                UserName = $"{fp.Post.User.FirstName} {fp.Post.User.LastName}",
+                UserImage = fp.Post.User.ProfilePic,
+                FilesUrls = fp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>()
+
+
+            }).ToList().AsReadOnly();
+        }
+
+        public async Task<bool> RemoveFavoritePostAsync(int userId, int postId)
+        {
+            var favoritePost = await _unitOfWork.Repository<FavoritePost>()
+            .FirstOrDefaultAsync(fp => fp.UserId == userId && fp.PostId == postId);
+
+            if (favoritePost == null)
+            {
+                throw new Exception("Favorite post not found.");
+            }
+
+            _unitOfWork.Repository<FavoritePost>().Delete(favoritePost);
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+            {
+                throw new Exception("An error occurred while removing the post from favorites.");
+            }
+
+            return true;
+        }
+
+        public async Task<bool> SharePostAsync(int userId, int postId)
+        {
+
+            var post = await _unitOfWork.Repository<Post>().GetByIdAsync(postId);
+
+            if (post == null)
+            {
+                throw new Exception("Post Not founded!");
+            }
+
+            var user = await _unitOfWork.Repository<User>().GetByIdAsync(userId);
+
+            if (user == null)
+                throw new Exception($"User Not founded with this Id {userId}");
+
+            var sharedPost = new SharedPost
+            {
+                UserId = userId,
+                PostId = postId
+            };
+
+            _unitOfWork.Repository<SharedPost>().Add(sharedPost);
+
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+            {
+                throw new Exception("An error occurred while sharing the post.");
+            }
+
+            return true;
+
+        }
+
+        public async Task<IReadOnlyList<PostToReturnDto>> GetSharedPostsAsync(int userId)
+        {
+            var spec = new SharedPostsSpecification(userId);
+
+            var sharedPosts = await _unitOfWork.Repository<SharedPost>().GetAllWithSpecAsync(spec);
+
+            if (sharedPosts == null || !sharedPosts.Any())
+                throw new Exception("No shared posts found.");
+
+            return sharedPosts.Select(sp => new PostToReturnDto
+            {
+                PostId = sp.Post.Id,
+                Caption = sp.Post.Caption,
+                FilesUrls = sp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = sp.Post.User.Id,
+                UserName = $"{sp.Post.User.FirstName} {sp.Post.User.LastName}",
+                UserImage = sp.Post.User.ProfilePic,
+                ReactionsCount = sp.Post.Reactions?.Count ?? 0,
+                CommentsCount = sp.Post.Comments?.Count ?? 0,
+                Date = Helper.FormatDate(sp.Post.CreatedAt)
+
+            }).ToList().AsReadOnly();
+        }
+    }
+
+}

@@ -1,0 +1,6 @@
+@Glow_Up.APIs_HostAddress = http://localhost:5162
+
+GET {{Glow_Up.APIs_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
