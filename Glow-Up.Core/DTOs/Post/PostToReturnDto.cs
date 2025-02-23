@@ -25,5 +25,7 @@ namespace Glow_Up.Core.DTOs.Post
 
         public string Date { get; set; }
 
+        public string PostType { get; set; }
+
     }
 }

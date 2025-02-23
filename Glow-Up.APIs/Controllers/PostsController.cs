@@ -149,6 +149,21 @@ namespace Glow_Up.APIs.Controllers
             }
         }
 
+        [HttpGet("IsFavoritePost/{userId}/{postId}")]
+        public async Task<IActionResult> IsFavoritePost(int userId, int postId)
+        {
+            try
+            {
+                var result = await _postService.IsFavoritePostAsync(postId, userId);
+
+                return Ok(new { IsFavorite = result });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
+
         [HttpPost("SharePost/{userId}/{postId}")]
         public async Task<IActionResult> SharePost(int userId, int postId)
         {

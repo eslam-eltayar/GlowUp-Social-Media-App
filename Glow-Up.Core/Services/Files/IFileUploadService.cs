@@ -10,5 +10,7 @@ namespace Glow_Up.Core.Services.Files
     public interface IFileUploadService
     {
         Task<string> UploadFileAsync(IFormFile file, string folderName);
+
+        Task<TimeSpan> GetVideoDurationAsync(string filePath);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Glow_Up.Core.Models;
+﻿using Glow_Up.Core.Enums;
+using Glow_Up.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -14,7 +15,13 @@ namespace Glow_Up.Repositories._Data.Configurations
         public void Configure(EntityTypeBuilder<Post> builder)
         {
             builder.Property(p => p.Caption)
-           .HasMaxLength(255);  
+                .HasMaxLength(255);
+
+            builder.Property(p => p.PostType)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => (PostType)Enum.Parse(typeof(PostType), v));
+
         }
     }
 }

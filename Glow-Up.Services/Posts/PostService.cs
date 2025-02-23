@@ -9,11 +9,15 @@ using Glow_Up.Core.Specifications.Post_Spec;
 using Glow_Up.Core.Specifications.SharedPosts_Spec;
 using Glow_Up.Services.Helpers;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Glow_Up.Services.Posts
 {
@@ -142,13 +146,29 @@ namespace Glow_Up.Services.Posts
                 if (mediaSaveResult <= 0)
                     throw new Exception("An error occurred while saving media files.");
 
+                // Determine PostType
+                if (mediaItems.Count == 1 && mediaItems[0].Type == MediaType.Video)
+                {
+                    var videoDuration = await _fileUploadService.GetVideoDurationAsync(mediaItems[0].Url);
+                    post.PostType = videoDuration <= TimeSpan.FromMinutes(1) ? PostType.Clip : PostType.Video;
+                }
+                else
+                {
+                    post.PostType = PostType.Post;
+                }
+
+
+                _unitOfWork.Repository<Post>().Update(post);
+                await _unitOfWork.CompleteAsync();
+
             }
 
             return new PostToReturnDto
             {
                 PostId = post.Id,
                 Caption = post.Caption,
-                FilesUrls = mediaUrls
+                FilesUrls = mediaUrls,
+                PostType = post.PostType.ToString()
             };
 
         }
@@ -243,7 +263,8 @@ namespace Glow_Up.Services.Posts
                 CommentsCount = post.Comments?.Count ?? 0,
                 SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == post.Id).Result,
                 Date = Helper.FormatDate(post.CreatedAt),
-                IsShared = false
+                IsShared = false,
+                PostType = post.PostType.ToString()
 
             }).ToList();
 
@@ -259,11 +280,12 @@ namespace Glow_Up.Services.Posts
                 CommentsCount = sp.Post.Comments?.Count ?? 0,
                 SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == sp.Post.Id).Result,
                 Date = Helper.FormatDate(sp.Post.CreatedAt),
-                IsShared = true
+                IsShared = true,
+                PostType = sp.Post.PostType.ToString()
 
             }));
 
-            return allPosts.OrderByDescending(p => p.Date).ToList().AsReadOnly();
+            return allPosts.OrderByDescending(p => p.PostId).ToList().AsReadOnly();
         }
 
 
@@ -314,7 +336,8 @@ namespace Glow_Up.Services.Posts
                 CommentsCount = post.Comments?.Count ?? 0,
                 SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == post.Id).Result,
                 Date = Helper.FormatDate(post.CreatedAt),
-                IsShared = false
+                IsShared = false,
+                PostType = post.PostType.ToString()
 
             }).ToList();
 
@@ -330,7 +353,8 @@ namespace Glow_Up.Services.Posts
                 CommentsCount = sp.Post.Comments?.Count ?? 0,
                 SharesCount = _unitOfWork.Repository<SharedPost>().CountAsync(sp => sp.PostId == sp.Post.Id).Result,
                 Date = Helper.FormatDate(sp.Post.CreatedAt),
-                IsShared = true
+                IsShared = true,
+                PostType = sp.Post.PostType.ToString()
 
             }));
 
@@ -340,6 +364,14 @@ namespace Glow_Up.Services.Posts
 
         public async Task<bool> AddFavoritePostAsync(int userId, int postId)
         {
+            var existingFavorite = await _unitOfWork.Repository<FavoritePost>()
+                .FirstOrDefaultAsync(fp => fp.UserId == userId && fp.PostId == postId);
+
+            if (existingFavorite != null)
+            {
+                throw new Exception("This post is already in your favorites.");
+            }
+
             var favoritePost = new FavoritePost
             {
                 UserId = userId,
@@ -380,7 +412,8 @@ namespace Glow_Up.Services.Posts
                 IsShared = false,
                 UserName = $"{fp.Post.User.FirstName} {fp.Post.User.LastName}",
                 UserImage = fp.Post.User.ProfilePic,
-                FilesUrls = fp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>()
+                FilesUrls = fp.Post.MediaItems?.Select(m => m.Url).ToList() ?? new List<string>(),
+                PostType = fp.Post.PostType.ToString()
 
 
             }).ToList().AsReadOnly();
@@ -463,6 +496,18 @@ namespace Glow_Up.Services.Posts
                 Date = Helper.FormatDate(sp.Post.CreatedAt)
 
             }).ToList().AsReadOnly();
+        }
+
+        public async Task<bool> IsFavoritePostAsync(int postId, int userId)
+        {
+            var favoritePost = await _unitOfWork.Repository<FavoritePost>()
+            .FirstOrDefaultAsync(fp => fp.UserId == userId && fp.PostId == postId);
+
+            if (favoritePost == null)
+                return false;
+
+            return true;
+
         }
     }
 

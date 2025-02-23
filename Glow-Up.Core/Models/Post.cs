@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Glow_Up.Core.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace Glow_Up.Core.Models
     {
         public string? Caption { get; set; }
         public DateTime CreatedAt { get; set; }
-
+        public PostType PostType { get; set; }
 
         public int UserId { get; set; }
         public User User { get; set; }

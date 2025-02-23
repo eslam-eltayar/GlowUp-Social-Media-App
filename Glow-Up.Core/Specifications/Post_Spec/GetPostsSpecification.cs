@@ -13,9 +13,9 @@ namespace Glow_Up.Core.Specifications.Post_Spec
         public GetPostsSpecification(string feeling)
         : base(feeling == null ? null : p => p.Reactions.Any(r => r.Type == GetReactionTypeForFeeling(feeling)))
         {
-            AddIncludes();
-
             ApplyOrderByDescending(p => p.Id);
+
+            AddIncludes();
             
             if (!string.IsNullOrEmpty(feeling))
             {

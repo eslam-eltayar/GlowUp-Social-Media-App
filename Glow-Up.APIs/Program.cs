@@ -43,7 +43,6 @@ namespace Glow_Up.APIs
 
             app.UseAuthorization();
 
-
             app.MapControllers();
 
             app.Run();

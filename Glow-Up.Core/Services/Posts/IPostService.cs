@@ -27,5 +27,6 @@ namespace Glow_Up.Core.Services.Posts
         Task<bool> SharePostAsync(int userId, int postId);
         Task<IReadOnlyList<PostToReturnDto>> GetSharedPostsAsync(int userId);
 
+        Task<bool> IsFavoritePostAsync(int postId, int userId);
     }
 }

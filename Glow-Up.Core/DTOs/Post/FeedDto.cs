@@ -25,5 +25,7 @@ namespace Glow_Up.Core.DTOs.Post
         public bool IsShared { get; set; }
 
         public string Date { get; set; }
+
+        public string PostType { get; set; }
     }
 }
