@@ -159,5 +159,19 @@ namespace Glow_Up.APIs.Controllers
                 return NotFound(new { Message = ex.Message });
             }
         }
+
+        [HttpGet("MostPostReactedThisWeek")]
+        public async Task<ActionResult<BHPostToReturnDto>> GetMostPostReactedThisWeek(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var post = await _blackHatService.GetMostPostReactedThisWeekAsync(cancellationToken);
+                return Ok(post);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
     }
 }

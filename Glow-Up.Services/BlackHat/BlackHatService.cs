@@ -337,9 +337,73 @@ namespace Glow_Up.Services.BlackHat
             return existingLike != null;
         }
 
-        public Task<BHPostToReturnDto> GetMostPopularPostAsync(CancellationToken cancellationToken = default)
+        public async Task<BHPostToReturnDto> GetMostPopularPostAsync(CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var today = DateTime.UtcNow.Date;
+
+            var spec = new GetBHPostsSpecification(null)
+            {
+                Criteria = post => post.Comments.Any(comment => comment.CreatedAt.Date == today)
+            };
+
+            var posts = await _unitOfWork.Repository<BHPost>().GetAllWithSpecAsync(spec, cancellationToken);
+
+            if (posts == null || !posts.Any())
+                throw new Exception("No posts with comments found for today");
+
+            var mostPopularPost = posts
+                .OrderByDescending(post => post.Comments.Count(comment => comment.CreatedAt.Date == today))
+                .FirstOrDefault();
+
+            if (mostPopularPost == null)
+                throw new Exception("No posts with comments found for today");
+
+            return new BHPostToReturnDto
+            {
+                PostId = mostPopularPost.Id,
+                Caption = mostPopularPost.Caption,
+                Categoty = mostPopularPost.Category.ToString(),
+                Date = Helper.FormatDate(mostPopularPost.CreatedAt),
+                CommentsCount = mostPopularPost.Comments.Count(comment => comment.CreatedAt.Date == today),
+                LikesCount = mostPopularPost.Likes?.Count ?? 0,
+                FilesUrls = mostPopularPost.Medias?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = mostPopularPost.UserId,
+            };
+        }
+
+        public async Task<BHPostToReturnDto> GetMostPostReactedThisWeekAsync(CancellationToken cancellationToken = default)
+        {
+            var startOfWeek = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.Date.DayOfWeek);
+            var endOfWeek = startOfWeek.AddDays(7);
+
+            var spec = new GetBHPostsSpecification(null)
+            {
+                Criteria = post => post.Likes.Any(like => like.CreatedAt >= startOfWeek && like.CreatedAt < endOfWeek)
+            };
+
+            var posts = await _unitOfWork.Repository<BHPost>().GetAllWithSpecAsync(spec, cancellationToken);
+
+            if (posts == null || !posts.Any())
+                throw new Exception("No posts with reactions found for this week");
+
+            var mostReactedPost = posts
+                .OrderByDescending(post => post.Likes.Count(like => like.CreatedAt >= startOfWeek && like.CreatedAt < endOfWeek))
+                .FirstOrDefault();
+
+            if (mostReactedPost == null)
+                throw new Exception("No posts with reactions found for this week");
+
+            return new BHPostToReturnDto
+            {
+                PostId = mostReactedPost.Id,
+                Caption = mostReactedPost.Caption,
+                Categoty = mostReactedPost.Category.ToString(),
+                Date = Helper.FormatDate(mostReactedPost.CreatedAt),
+                CommentsCount = mostReactedPost.Comments?.Count ?? 0,
+                LikesCount = mostReactedPost.Likes.Count(like => like.CreatedAt >= startOfWeek && like.CreatedAt < endOfWeek),
+                FilesUrls = mostReactedPost.Medias?.Select(m => m.Url).ToList() ?? new List<string>(),
+                UserId = mostReactedPost.UserId,
+            };
         }
     }
 }

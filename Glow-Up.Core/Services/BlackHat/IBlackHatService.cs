@@ -29,5 +29,7 @@ namespace Glow_Up.Core.Services.BlackHat
         Task<bool> HasUserLikedPostAsync(int postId, int userId, CancellationToken cancellationToken = default);
 
         Task<BHPostToReturnDto> GetMostPopularPostAsync(CancellationToken cancellationToken = default);
+
+        Task<BHPostToReturnDto> GetMostPostReactedThisWeekAsync(CancellationToken cancellationToken = default);
     }
 }

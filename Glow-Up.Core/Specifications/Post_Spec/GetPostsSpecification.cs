@@ -17,10 +17,10 @@ namespace Glow_Up.Core.Specifications.Post_Spec
 
             AddIncludes();
             
-            if (!string.IsNullOrEmpty(feeling))
-            {
-                ApplyOrderByReactionCount(feeling);
-            }
+            //if (!string.IsNullOrEmpty(feeling))
+            //{
+            //    ApplyOrderByReactionCount(feeling);
+            //}
         }
 
 

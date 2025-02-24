@@ -96,72 +96,74 @@ namespace Glow_Up.Services.Posts
             if (dto == null) throw new Exception("Input cannot be empty.");
 
             var user = await _unitOfWork.Repository<User>().GetByIdAsync(userId);
-
             if (user == null)
-                throw new Exception($"User Not founded with this Id {userId}");
+                throw new Exception($"User not found with this Id {userId}");
 
             var post = new Post
             {
                 Caption = dto.Caption,
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
+                PostType = PostType.Post // Default type if no media
             };
 
             _unitOfWork.Repository<Post>().Add(post);
-
             int postSaveResult = await _unitOfWork.CompleteAsync();
 
             if (postSaveResult <= 0)
                 throw new Exception("An error occurred while saving the post.");
 
-            // Save media files
+            // If there are no media files, return early
+            if (dto.MediaFiles == null || !dto.MediaFiles.Any())
+            {
+                return new PostToReturnDto
+                {
+                    PostId = post.Id,
+                    Caption = post.Caption,
+                    FilesUrls = new List<string>(),
+                    PostType = post.PostType.ToString()
+                };
+            }
 
+            // Save media files
             var mediaItems = new List<Media>();
             var mediaUrls = new List<string>();
+            int videoCount = 0;
 
-            if (dto.MediaFiles.Any())
+            foreach (var file in dto.MediaFiles)
             {
-                foreach (var file in dto.MediaFiles)
+                if (file.Length > 0)
                 {
-                    if (file.Length > 0)
+                    var fileUrl = await _fileUploadService.UploadFileAsync(file, "posts");
+                    var mediaType = Helper.GetMediaType(file.ContentType);
+
+                    if (mediaType == MediaType.Video)
+                        videoCount++;
+
+                    var media = new Media
                     {
-                        var fileUrl = await _fileUploadService.UploadFileAsync(file, "posts");
+                        Url = fileUrl,
+                        Type = mediaType,
+                        CreatedAt = DateTime.UtcNow,
+                        PostId = post.Id
+                    };
 
-                        var media = new Media
-                        {
-                            Url = fileUrl,
-                            Type = Helper.GetMediaType(file.ContentType),
-                            CreatedAt = DateTime.Now,
-                            PostId = post.Id
-                        };
-
-                        mediaItems.Add(media);
-                        mediaUrls.Add(fileUrl);
-                    }
+                    mediaItems.Add(media);
+                    mediaUrls.Add(fileUrl);
                 }
-
-                await _unitOfWork.Repository<Media>().AddRange(mediaItems);
-                int mediaSaveResult = await _unitOfWork.CompleteAsync();
-
-                if (mediaSaveResult <= 0)
-                    throw new Exception("An error occurred while saving media files.");
-
-                // Determine PostType
-                if (mediaItems.Count == 1 && mediaItems[0].Type == MediaType.Video)
-                {
-                    var videoDuration = await _fileUploadService.GetVideoDurationAsync(mediaItems[0].Url);
-                    post.PostType = videoDuration <= TimeSpan.FromMinutes(1) ? PostType.Clip : PostType.Video;
-                }
-                else
-                {
-                    post.PostType = PostType.Post;
-                }
-
-
-                _unitOfWork.Repository<Post>().Update(post);
-                await _unitOfWork.CompleteAsync();
-
             }
+
+            await _unitOfWork.Repository<Media>().AddRange(mediaItems);
+            int mediaSaveResult = await _unitOfWork.CompleteAsync();
+
+            if (mediaSaveResult <= 0)
+                throw new Exception("An error occurred while saving media files.");
+
+            // Determine PostType
+            post.PostType = (videoCount == 1 && mediaItems.Count == 1) ? PostType.Video : PostType.Post;
+
+            _unitOfWork.Repository<Post>().Update(post);
+            await _unitOfWork.CompleteAsync();
 
             return new PostToReturnDto
             {
