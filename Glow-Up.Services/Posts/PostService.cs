@@ -360,7 +360,7 @@ namespace Glow_Up.Services.Posts
 
             }));
 
-            return allPosts.OrderByDescending(p => p.Date).ToList().AsReadOnly();
+            return allPosts.OrderByDescending(p => p.PostId).ToList().AsReadOnly();
 
         }
 
