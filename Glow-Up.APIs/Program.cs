@@ -1,5 +1,7 @@
 
 using Glow_Up.APIs.Extensions;
+using Glow_Up.APIs.Hubs;
+using Glow_Up.Core.Mappers;
 using Glow_Up.Repositories._Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,17 +25,23 @@ namespace Glow_Up.APIs
 
             builder.Services.AddCors();
 
+            builder.Services.AddSignalR();
+
+            builder.Services.AddAutoMapper(typeof(NotificationProfile));
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
 
             //if (app.Environment.IsDevelopment())
             //{
-                app.UseSwagger();
-                app.UseSwaggerUI();
+            app.UseSwagger();
+            app.UseSwaggerUI();
             //}
 
             app.UseHttpsRedirection();
+
+
 
             app.UseCors(options =>
                         options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
@@ -42,6 +50,11 @@ namespace Glow_Up.APIs
             app.UseStaticFiles();
 
             app.UseAuthorization();
+
+            app.UseRouting().UseEndpoints(endpoints =>
+            {
+                endpoints.MapHub<NotificationHub>("/notificationHub");
+            });
 
             app.MapControllers();
 

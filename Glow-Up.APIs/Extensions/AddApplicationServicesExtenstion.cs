@@ -1,7 +1,9 @@
-﻿using Glow_Up.Core.Repositories;
+﻿using Glow_Up.APIs.Hubs;
+using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.BlackHat;
 using Glow_Up.Core.Services.Comment;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Services.Posts;
 using Glow_Up.Core.Services.Users;
 using Glow_Up.Repositories._Data;
@@ -10,6 +12,7 @@ using Glow_Up.Repositories.Repositories;
 using Glow_Up.Services.BlackHat;
 using Glow_Up.Services.Comments;
 using Glow_Up.Services.Files;
+using Glow_Up.Services.Notifications;
 using Glow_Up.Services.Posts;
 using Glow_Up.Services.Users;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +44,8 @@ namespace Glow_Up.APIs.Extensions
             Services.AddScoped<IUserService, UserService>();
             Services.AddScoped<IBlackHatService, BlackHatService>();
 
+            Services.AddScoped<INotificationService, NotificationService>();
+            Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 
 
             return Services;

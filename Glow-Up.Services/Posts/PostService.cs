@@ -9,15 +9,7 @@ using Glow_Up.Core.Specifications.Post_Spec;
 using Glow_Up.Core.Specifications.SharedPosts_Spec;
 using Glow_Up.Services.Helpers;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using System.Text.RegularExpressions;
-using System.Globalization;
+using Glow_Up.Core.Services.Notifications;
 
 namespace Glow_Up.Services.Posts
 {
@@ -26,12 +18,14 @@ namespace Glow_Up.Services.Posts
         private readonly IFileUploadService _fileUploadService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly INotificationService _notificationService;
 
-        public PostService(IFileUploadService fileUploadService, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        public PostService(IFileUploadService fileUploadService, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, INotificationService notificationService)
         {
             _fileUploadService = fileUploadService;
             _unitOfWork = unitOfWork;
             _webHostEnvironment = webHostEnvironment;
+            _notificationService = notificationService;
         }
 
 
@@ -86,6 +80,8 @@ namespace Glow_Up.Services.Posts
             {
                 throw new Exception("An error occurred while adding the reaction.");
             }
+
+            await _notificationService.CreateLikeNotificationAsync(postId, dto.UserId);
 
             return true;
 

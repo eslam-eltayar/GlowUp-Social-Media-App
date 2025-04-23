@@ -32,6 +32,8 @@ namespace Glow_Up.Repositories._Data
         public DbSet<Follow> Follows { get; set; }
         public DbSet<Media> Medias { get; set; }
         public DbSet<FavoritePost> FavoritePosts { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+
 
         // BlackHat 
         public DbSet<BHPost> BHPosts { get; set; }
