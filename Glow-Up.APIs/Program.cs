@@ -23,7 +23,16 @@ namespace Glow_Up.APIs
 
             builder.Services.AddIdentityServices(builder.Configuration);
 
-            builder.Services.AddCors();
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                    // Do NOT use .AllowCredentials() with AllowAnyOrigin()
+                });
+            });
 
             builder.Services.AddSignalR();
 
@@ -40,23 +49,19 @@ namespace Glow_Up.APIs
             //}
 
             app.UseHttpsRedirection();
-
-
-
-            app.UseCors(options =>
-                        options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
-                        );
-
             app.UseStaticFiles();
+
+            app.UseRouting();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 
-            app.UseRouting().UseEndpoints(endpoints =>
+            app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<NotificationHub>("/notificationHub");
+                endpoints.MapControllers();
             });
-
-            app.MapControllers();
 
             app.Run();
         }
