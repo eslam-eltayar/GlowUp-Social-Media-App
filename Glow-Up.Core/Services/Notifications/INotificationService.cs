@@ -19,5 +19,10 @@ namespace Glow_Up.Core.Services.Notifications
         Task CreateLikeNotificationAsync(int postId, int userIdLikingPost);
         Task CreateCommentNotificationAsync(int postId, int userIdCommentingPost);
         Task CreateFollowNotificationAsync(int userIdFollower, int userIdFollowing);
+        Task CreateMessageNotificationAsync(int senderId, int recipientId, int messageId);
+        Task CreateBHCommentNotificationAsync(int commenterId, int postAuthorId, int postId, int commentId);
+        Task CreateBHLikeNotificationAsync(int likerId, int postAuthorId, int postId);
+        Task CreateBHVoteNotificationAsync(int voterId, int commentAuthorId, int postId, int commentId, bool isUpvote);
+        Task CreateReplyNotificationAsync(int replierId, int commentAuthorId, int postId, int replyId);
     }
 }

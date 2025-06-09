@@ -7,6 +7,7 @@ using Glow_Up.Core.Models.BlackHat;
 using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.BlackHat;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Specifications.BlackHat;
 using Glow_Up.Services.Helpers;
 using System;
@@ -19,11 +20,13 @@ namespace Glow_Up.Services.BlackHat
 {
     public class BlackHatService(
         IUnitOfWork unitOfWork,
-        IFileUploadService fileUploadService) : IBlackHatService
+        IFileUploadService fileUploadService,
+        INotificationService notificationService) : IBlackHatService
 
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IFileUploadService _fileUploadService = fileUploadService;
+        private readonly INotificationService _notificationService = notificationService;
 
         public async Task<BHCommentToReturnDto> AddCommentAsync(int postId, CreateBHCommentDto dto, CancellationToken cancellationToken = default)
         {
@@ -55,6 +58,9 @@ namespace Glow_Up.Services.BlackHat
 
             if (result <= 0)
                 throw new Exception("There's an Error while Adding Comment!");
+
+            // After successfully creating the comment
+            await _notificationService.CreateBHCommentNotificationAsync(user.Id, post.UserId, postId, BHcomment.Id);
 
             return new BHCommentToReturnDto
             {
@@ -260,6 +266,15 @@ namespace Glow_Up.Services.BlackHat
             if (result <= 0)
                 throw new Exception("There's an Error while Increasing Comment");
 
+
+            await _notificationService.CreateBHVoteNotificationAsync(
+                userId,
+                comment.UserId,
+                comment.BHPostId,
+                commentId,
+                result <= 0
+            );
+
             return true;
         }
 
@@ -292,6 +307,9 @@ namespace Glow_Up.Services.BlackHat
             int result = await _unitOfWork.CompleteAsync(cancellationToken);
 
             if (result <= 0) throw new Exception("There's an Error while Like Post");
+
+            // After successfully creating the like
+            await _notificationService.CreateBHLikeNotificationAsync(userId, post.UserId, postId);
 
             return true;
         }

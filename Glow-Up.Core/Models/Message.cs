@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Glow_Up.Core.Models;
+public class Message : BaseModel
+{
+    public int SenderId { get; set; }
+    public User Sender { get; set; }
+    public int RecipientId { get; set; }
+    public User Recipient { get; set; }
+    public string Content { get; set; }
+    public DateTime SentAt { get; set; }
+    public bool IsRead { get; set; }
+}

@@ -19,6 +19,8 @@ namespace Glow_Up.Core.DTOs.Comment
         public string? UserImage { get; set; }
 
         public int? ParentCommentId { get; set; } 
-        public List<CommentToReturnDto> Replies { get; set; } = new(); 
+        public List<CommentToReturnDto> Replies { get; set; } = new();
+
+        public int? ParentReplyId { get; set; }
     }
 }

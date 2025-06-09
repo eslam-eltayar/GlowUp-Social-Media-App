@@ -22,7 +22,8 @@ namespace Glow_Up.Core.Models
         // Replies
         public int? ParentCommentId { get; set; } 
         public Comment? ParentComment { get; set; } 
-        public ICollection<Comment> Replies { get; set; } = new List<Comment>(); 
+        public ICollection<Comment> Replies { get; set; } = new List<Comment>();
+        public int? ParentReplyId { get; set; }  // New property for nested replies
 
         public ICollection<Reaction> Reactions { get; set; } = new HashSet<Reaction>();
         ///public ICollection<Reply> Replies { get; set; } = new HashSet<Reply>();

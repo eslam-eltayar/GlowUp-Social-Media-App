@@ -19,6 +19,9 @@ namespace Glow_Up.Core.Models
         public string Type { get; set; } // e.g., "like", "comment", "follow", "message"
         public int? TargetId { get; set; } // PostId, CommentId, etc. (depends on Type)
 
+        public int? SubTargetId { get; set; }
+        public string? AdditionalInfo { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsRead { get; set; } = false;

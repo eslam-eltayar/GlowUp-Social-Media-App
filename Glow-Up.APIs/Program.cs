@@ -30,7 +30,7 @@ namespace Glow_Up.APIs
                     policy.AllowAnyOrigin()
                           .AllowAnyMethod()
                           .AllowAnyHeader();
-                    // Do NOT use .AllowCredentials() with AllowAnyOrigin()
+                          //.AllowCredentials();
                 });
             });
 
@@ -59,6 +59,7 @@ namespace Glow_Up.APIs
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapHub<ChatHub>("/chatHub");
                 endpoints.MapHub<NotificationHub>("/notificationHub");
                 endpoints.MapControllers();
             });

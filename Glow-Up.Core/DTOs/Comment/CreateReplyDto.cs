@@ -11,6 +11,7 @@ namespace Glow_Up.Core.DTOs.Comment
     {
         public string? Text { get; set; } 
         public IFormFile? Media { get; set; } 
-        public int ParentCommentId { get; set; } 
+        public int ParentCommentId { get; set; }
+        public int? ParentReplyId { get; set; }  // Add this property
     }
 }
