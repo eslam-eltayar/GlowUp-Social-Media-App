@@ -25,12 +25,12 @@ namespace Glow_Up.APIs
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", policy =>
+                options.AddPolicy("glowUp", policy =>
                 {
-                    policy.AllowAnyOrigin()
+                    policy.WithOrigins("https://glowup.mogasoft.net")
                           .AllowAnyMethod()
-                          .AllowAnyHeader();
-                          //.AllowCredentials();
+                          .AllowAnyHeader()
+                          .AllowCredentials();
                 });
             });
 
@@ -53,7 +53,7 @@ namespace Glow_Up.APIs
 
             app.UseRouting();
 
-            app.UseCors("AllowAll");
+            app.UseCors("glowUp");
 
             app.UseAuthorization();
 
