@@ -5,6 +5,7 @@ using Glow_Up.Core.Enums;
 using Glow_Up.Core.Models;
 using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Services.Users;
 using Glow_Up.Core.Specifications.User_Spec;
 using Glow_Up.Services.Helpers;
@@ -20,20 +21,19 @@ using System.Threading.Tasks;
 
 namespace Glow_Up.Services.Users
 {
-    public class UserService : IUserService
+    public class UserService(
+        IUnitOfWork unitOfWork, 
+        IFileUploadService fileUploadService, 
+        IWebHostEnvironment webHostEnvironment, 
+        INotificationService notificationService,
+        UserManager<AppUser> userManager) : IUserService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IFileUploadService _fileUploadService;
-        private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly UserManager<AppUser> _userManager;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
+        private readonly IFileUploadService _fileUploadService = fileUploadService;
+        private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
+        private readonly INotificationService _notificationService = notificationService;
+        private readonly UserManager<AppUser> _userManager = userManager;
 
-        public UserService(IUnitOfWork unitOfWork, IFileUploadService fileUploadService, IWebHostEnvironment webHostEnvironment, UserManager<AppUser> userManager)
-        {
-            _unitOfWork = unitOfWork;
-            _fileUploadService = fileUploadService;
-            _webHostEnvironment = webHostEnvironment;
-            _userManager = userManager;
-        }
         public async Task<UserToReturnDto> CreateUserAsync(RegisterDto dto)
         {
             if (dto == null) throw new ArgumentNullException("User Data cannot be null");
@@ -260,6 +260,8 @@ namespace Glow_Up.Services.Users
             {
                 throw new Exception("An error occurred while following the user.");
             }
+
+            await _notificationService.CreateFollowNotificationAsync(followerId, followeeId);
 
             return true;
         }

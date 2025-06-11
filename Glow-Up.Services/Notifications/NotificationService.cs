@@ -30,6 +30,7 @@ namespace Glow_Up.Services.Notifications
             }
 
             var replier = await _unitOfWork.Repository<User>().GetByIdAsync(replierId);
+
             var recipient = await _unitOfWork.Repository<User>().GetByIdAsync(commentAuthorId);
 
             if (replier == null || recipient == null)
@@ -168,7 +169,7 @@ namespace Glow_Up.Services.Notifications
                 notification.IsRead = true;
             }
 
-           await _unitOfWork.CompleteAsync();
+            await _unitOfWork.CompleteAsync();
         }
 
         public async Task MarkNotificationAsReadAsync(int notificationId, int userId)
@@ -249,7 +250,7 @@ namespace Glow_Up.Services.Notifications
             {
                 SenderId = commenterId,
                 RecipientId = postAuthorId,
-                Type ="BHComment",
+                Type = "BHComment",
                 TargetId = postId,
                 SubTargetId = commentId,
                 CreatedAt = DateTime.UtcNow,
@@ -315,7 +316,6 @@ namespace Glow_Up.Services.Notifications
 
         public async Task CreateFollowNotificationAsync(int followerId, int followingId)
         {
-            // Don't create a notification if a user tries to follow themselves
             if (followerId == followingId)
             {
                 return;
@@ -331,6 +331,37 @@ namespace Glow_Up.Services.Notifications
                 TargetId = null,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
+            };
+
+            await CreateNotificationAsync(notification);
+        }
+
+        public async Task CreateShareNotificationAsync(int sharerId, int postAuthorId, int postId)
+        {
+            if (sharerId == postAuthorId)
+            {
+                return; // Don't notify self
+            }
+
+            var sharer = await _unitOfWork.Repository<User>().GetByIdAsync(sharerId);
+
+            var recipient = await _unitOfWork.Repository<User>().GetByIdAsync(postAuthorId);
+
+            if (sharer == null || recipient == null)
+            {
+                throw new Exception("User not found");
+            }
+
+            var notification = new Notification
+            {
+                SenderId = sharerId,
+                RecipientId = postAuthorId,
+                Type = "share",
+                TargetId = postId,
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false,
+                Sender = sharer,
+                Recipient = recipient
             };
 
             await CreateNotificationAsync(notification);

@@ -468,6 +468,8 @@ namespace Glow_Up.Services.Posts
                 throw new Exception("An error occurred while sharing the post.");
             }
 
+            await _notificationService.CreateShareNotificationAsync(userId, post.UserId, postId);
+
             return true;
 
         }

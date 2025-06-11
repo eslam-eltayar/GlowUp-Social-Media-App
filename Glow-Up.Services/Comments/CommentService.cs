@@ -79,6 +79,12 @@ namespace Glow_Up.Services.Comments
             if (saveResult <= 0)
                 throw new Exception("An error occurred while saving the comment.");
 
+            // Create notification if the commenter is not the post author
+            if (userId != post.UserId)
+            {
+                await _notificationService.CreateCommentNotificationAsync(comment.Id, userId);
+            }
+
             return new CommentToReturnDto
             {
                 Id = comment.Id,
@@ -319,6 +325,10 @@ namespace Glow_Up.Services.Comments
 
         private CommentToReturnDto MapCommentToDto(Comment comment)
         {
+            // include the necessary properties from the Comment model
+            if (comment == null)
+                throw new ArgumentNullException(nameof(comment), "Comment cannot be null.");
+
             var dto = new CommentToReturnDto
             {
                 Id = comment.Id,
@@ -328,8 +338,8 @@ namespace Glow_Up.Services.Comments
                 PostId = comment.PostId,
                 ParentCommentId = comment.ParentCommentId,
                 CreatedAt = Helper.FormatDate(comment.CreatedAt),
-                UserName = $"{comment.User.FirstName} {comment.User.LastName}",
-                UserImage = comment.User.ProfilePic,
+                UserName = $"{comment.User?.FirstName} {comment.User?.LastName}",
+                UserImage = comment.User?.ProfilePic,
             };
 
             if (comment.Replies != null && comment.Replies.Any())

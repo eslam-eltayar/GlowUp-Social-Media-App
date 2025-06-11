@@ -10,7 +10,7 @@ namespace Glow_Up.Core.Specifications.Comment_Spec
     public class CommentsForPostSpecification : BaseSpecification<Comment>
     {
         public CommentsForPostSpecification(int postId)
-            : base(c => c.PostId == postId && c.ParentCommentId == null)
+            : base(c => c.PostId == postId /*&& c.ParentCommentId == null*/)
         {
             AddIncludes();
         }
