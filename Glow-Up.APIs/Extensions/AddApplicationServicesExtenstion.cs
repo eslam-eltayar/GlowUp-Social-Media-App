@@ -3,6 +3,7 @@ using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.BlackHat;
 using Glow_Up.Core.Services.Comment;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Logs;
 using Glow_Up.Core.Services.Messages;
 using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Services.Posts;
@@ -13,6 +14,7 @@ using Glow_Up.Repositories.Repositories;
 using Glow_Up.Services.BlackHat;
 using Glow_Up.Services.Comments;
 using Glow_Up.Services.Files;
+using Glow_Up.Services.Log;
 using Glow_Up.Services.Messages;
 using Glow_Up.Services.Notifications;
 using Glow_Up.Services.Posts;
@@ -51,6 +53,8 @@ namespace Glow_Up.APIs.Extensions
 
             Services.AddScoped<IMessageService, MessageService>();
             Services.AddScoped<IMessagePublisher, MessagePublisher>();
+
+            Services.AddScoped<IActivityLogService, ActivityLogService>();
 
             return Services;
         }

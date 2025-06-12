@@ -83,7 +83,7 @@ namespace Glow_Up.APIs.Controllers
 
 
         [HttpGet("IsFollowing/{followerId:int}/{followeeId:int}")]
-        public async Task<ActionResult<bool>> IsFollowing(int followerId , int followeeId)
+        public async Task<ActionResult<bool>> IsFollowing(int followerId, int followeeId)
         {
             try
             {
@@ -125,5 +125,18 @@ namespace Glow_Up.APIs.Controllers
             }
         }
 
+        [HttpGet("Search")]
+        public async Task<ActionResult<IReadOnlyList<UserReturnDto>>> SearchUsers([FromQuery] string searchTerm)
+        {
+            try
+            {
+                var users = await _userService.SearchUsersAsync(searchTerm);
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
     }
 }

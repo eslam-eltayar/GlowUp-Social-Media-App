@@ -27,10 +27,11 @@ namespace Glow_Up.APIs
             {
                 options.AddPolicy("glowUp", policy =>
                 {
-                    policy.WithOrigins("https://glowup.mogasoft.net")
+                    policy//.WithOrigins("https://glowup.mogasoft.net")
+                           .AllowAnyOrigin()
                           .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials();
+                          .AllowAnyHeader();
+                          //.AllowCredentials();
                 });
             });
 

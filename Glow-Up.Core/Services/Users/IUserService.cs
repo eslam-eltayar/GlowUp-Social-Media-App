@@ -31,5 +31,7 @@ namespace Glow_Up.Core.Services.Users
         Task<IReadOnlyList<UserReturnDto>> GetAllUsersAsync();
 
         Task<IReadOnlyList<MutualFollowerDto>> GetMutualFollowersAsync(int userId, int otherUserId);
+
+        Task<IReadOnlyList<UserReturnDto>> SearchUsersAsync(string searchTerm);
     }
 }

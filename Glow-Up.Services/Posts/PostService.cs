@@ -10,6 +10,7 @@ using Glow_Up.Core.Specifications.SharedPosts_Spec;
 using Glow_Up.Services.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Glow_Up.Core.Services.Notifications;
+using Glow_Up.Core.Services.Logs;
 
 namespace Glow_Up.Services.Posts
 {
@@ -19,13 +20,20 @@ namespace Glow_Up.Services.Posts
         private readonly IUnitOfWork _unitOfWork;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly INotificationService _notificationService;
+        private readonly IActivityLogService _activityLogService;
 
-        public PostService(IFileUploadService fileUploadService, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, INotificationService notificationService)
+        public PostService(
+            IFileUploadService fileUploadService,
+            IUnitOfWork unitOfWork,
+            IWebHostEnvironment webHostEnvironment,
+            INotificationService notificationService,
+            IActivityLogService activityLogService)
         {
             _fileUploadService = fileUploadService;
             _unitOfWork = unitOfWork;
             _webHostEnvironment = webHostEnvironment;
             _notificationService = notificationService;
+            _activityLogService = activityLogService;
         }
 
 
@@ -82,6 +90,13 @@ namespace Glow_Up.Services.Posts
             }
 
             await _notificationService.CreateLikeNotificationAsync(postId, dto.UserId);
+
+            await _activityLogService.LogActivityAsync(
+                dto.UserId,
+                ActivityType.Like,
+                postId,
+                dto.ReactType
+             );
 
             return true;
 
@@ -469,6 +484,12 @@ namespace Glow_Up.Services.Posts
             }
 
             await _notificationService.CreateShareNotificationAsync(userId, post.UserId, postId);
+
+            await _activityLogService.LogActivityAsync(
+               userId,
+               ActivityType.Share,
+               postId
+             );
 
             return true;
 

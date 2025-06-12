@@ -1,8 +1,10 @@
 ﻿using Glow_Up.Core.DTOs.Comment;
+using Glow_Up.Core.Enums;
 using Glow_Up.Core.Models;
 using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.Comment;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Logs;
 using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Specifications.Comment_Spec;
 using Glow_Up.Services.Helpers;
@@ -22,17 +24,20 @@ namespace Glow_Up.Services.Comments
         private readonly IUnitOfWork _unitOfWork;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly INotificationService _notificationService;
+        private readonly IActivityLogService _activityLogService;
 
         public CommentService(
             IFileUploadService fileUploadService,
             IUnitOfWork unitOfWork,
             IWebHostEnvironment webHostEnvironment,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IActivityLogService activityLogService)
         {
             _fileUploadService = fileUploadService;
             _unitOfWork = unitOfWork;
             _webHostEnvironment = webHostEnvironment;
             _notificationService = notificationService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<CommentToReturnDto> CreateCommentAsync(int userId, int postId, AddCommentDto dto)
@@ -84,6 +89,12 @@ namespace Glow_Up.Services.Comments
             {
                 await _notificationService.CreateCommentNotificationAsync(comment.Id, userId);
             }
+
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.Comment,
+                postId
+            );
 
             return new CommentToReturnDto
             {
@@ -306,6 +317,14 @@ namespace Glow_Up.Services.Comments
                 parentReply!.UserId : parentComment.UserId;
 
             await _notificationService.CreateReplyNotificationAsync(userId, notificationRecipientId, postId, reply.Id);
+
+
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.Reply,
+                postId,
+                $"Replied to comment {dto.ParentCommentId}"
+            );
 
             return new CommentToReturnDto
             {

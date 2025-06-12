@@ -7,9 +7,11 @@ using Glow_Up.Core.Models.BlackHat;
 using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.BlackHat;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Logs;
 using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Specifications.BlackHat;
 using Glow_Up.Services.Helpers;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,12 +23,14 @@ namespace Glow_Up.Services.BlackHat
     public class BlackHatService(
         IUnitOfWork unitOfWork,
         IFileUploadService fileUploadService,
-        INotificationService notificationService) : IBlackHatService
+        INotificationService notificationService,
+        IActivityLogService activityLogService) : IBlackHatService
 
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IFileUploadService _fileUploadService = fileUploadService;
         private readonly INotificationService _notificationService = notificationService;
+        private readonly IActivityLogService _activityLogService = activityLogService;
 
         public async Task<BHCommentToReturnDto> AddCommentAsync(int postId, CreateBHCommentDto dto, CancellationToken cancellationToken = default)
         {
@@ -61,6 +65,13 @@ namespace Glow_Up.Services.BlackHat
 
             // After successfully creating the comment
             await _notificationService.CreateBHCommentNotificationAsync(user.Id, post.UserId, postId, BHcomment.Id);
+
+            await _activityLogService.LogActivityAsync(
+                dto.UserId,
+                ActivityType.BHComment,
+                postId,
+                $"Commented on a BlackHat post"
+            );
 
             return new BHCommentToReturnDto
             {
@@ -139,14 +150,20 @@ namespace Glow_Up.Services.BlackHat
 
             }
 
+            // Log the activity
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.CreateBHPost,
+                bHpost.Id,
+                $"Created a BlackHat post in category {dto.Category}"
+            );
+
             return new BHPostToReturnDto
             {
                 PostId = bHpost.Id,
                 Caption = bHpost.Caption,
                 FilesUrls = mediaUrls,
             };
-
-
         }
 
         public async Task<bool> DecreaseCommentAsync(int commentId, int userId, CancellationToken cancellationToken = default)
@@ -181,6 +198,13 @@ namespace Glow_Up.Services.BlackHat
 
             if (result <= 0)
                 throw new Exception("An Error While Decreasing Comment.");
+
+            await _activityLogService.LogActivityAsync(
+               userId,
+               ActivityType.BHVote,
+               commentId,
+               "Downvoted a BlackHat comment"
+             );
 
 
             return true;
@@ -275,6 +299,14 @@ namespace Glow_Up.Services.BlackHat
                 result <= 0
             );
 
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.BHVote,
+                commentId,
+                "Upvoted a BlackHat comment"
+            );
+
+
             return true;
         }
 
@@ -311,6 +343,13 @@ namespace Glow_Up.Services.BlackHat
             // After successfully creating the like
             await _notificationService.CreateBHLikeNotificationAsync(userId, post.UserId, postId);
 
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.BHLike,
+                postId,
+                "Liked a BlackHat post"
+            );
+
             return true;
         }
 
@@ -337,6 +376,13 @@ namespace Glow_Up.Services.BlackHat
             int result = await _unitOfWork.CompleteAsync(cancellationToken);
 
             if (result <= 0) throw new Exception("There's an error while unliking the post");
+
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityType.BHUnlike,
+                postId,
+                "Unliked a BlackHat post"
+            );
 
             return true;
         }

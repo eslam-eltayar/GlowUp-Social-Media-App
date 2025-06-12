@@ -1,15 +1,18 @@
 ﻿using Glow_Up.Core.DTOs.BHComment;
 using Glow_Up.Core.DTOs.BHPost;
+using Glow_Up.Core.DTOs.Logs;
 using Glow_Up.Core.DTOs.Post;
 using Glow_Up.Core.Services.BlackHat;
+using Glow_Up.Core.Services.Logs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Glow_Up.APIs.Controllers
 {
-    public class BlackHatController(IBlackHatService blackHatService) : ApiBaseController
+    public class BlackHatController(IBlackHatService blackHatService, IActivityLogService activityLogService) : ApiBaseController
     {
         private readonly IBlackHatService _blackHatService = blackHatService;
+        private readonly IActivityLogService _activityLogService = activityLogService;
 
         [HttpPost("AddPost/{userId}")]
         public async Task<ActionResult<BHPostToReturnDto>> CreatePost(int userId, [FromForm] CreateBHPostDto dto, CancellationToken cancellationToken)
@@ -173,5 +176,34 @@ namespace Glow_Up.APIs.Controllers
                 return NotFound(new { Message = ex.Message });
             }
         }
+
+        [HttpGet("UserActivities/{userId}")]
+        public async Task<ActionResult<IReadOnlyList<ActivityLogDto>>> GetUserActivities(int userId)
+        {
+            try
+            {
+                var activities = await _activityLogService.GetUserBHActivitiesAsync(userId);
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        [HttpGet("PostActivities/{postId}")]
+        public async Task<ActionResult<IReadOnlyList<ActivityLogDto>>> GetPostActivities(int postId)
+        {
+            try
+            {
+                var activities = await _activityLogService.GetBHPostActivitiesAsync(postId);
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
     }
 }

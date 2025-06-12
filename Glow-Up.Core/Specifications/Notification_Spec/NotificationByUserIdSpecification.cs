@@ -13,6 +13,7 @@ namespace Glow_Up.Core.Specifications.Notification_Spec
             : base(x => x.RecipientId == userId)
         {
             AddIncludes();
+            ApplyOrderByDescending(x => x.Id);
         }
 
         private void AddIncludes()

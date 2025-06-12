@@ -22,9 +22,9 @@ using System.Threading.Tasks;
 namespace Glow_Up.Services.Users
 {
     public class UserService(
-        IUnitOfWork unitOfWork, 
-        IFileUploadService fileUploadService, 
-        IWebHostEnvironment webHostEnvironment, 
+        IUnitOfWork unitOfWork,
+        IFileUploadService fileUploadService,
+        IWebHostEnvironment webHostEnvironment,
         INotificationService notificationService,
         UserManager<AppUser> userManager) : IUserService
     {
@@ -375,6 +375,24 @@ namespace Glow_Up.Services.Users
                 .AsReadOnly();
 
             return mutualFollowers;
+        }
+
+        public async Task<IReadOnlyList<UserReturnDto>> SearchUsersAsync(string searchTerm)
+        {
+            var spec = new UserSearchSpecification(searchTerm);
+            var users = await _unitOfWork.Repository<User>().GetAllWithSpecAsync(spec);
+
+            if (!users.Any())
+                throw new Exception("No users found matching the search criteria.");
+
+            return users.Select(user => new UserReturnDto
+            {
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                ProfilePic = user.ProfilePic,
+            }).ToList().AsReadOnly();
+
         }
     }
 }
