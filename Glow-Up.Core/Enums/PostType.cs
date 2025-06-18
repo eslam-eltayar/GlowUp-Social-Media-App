@@ -16,7 +16,8 @@ namespace Glow_Up.Core.Enums
         Video,
 
         [EnumMember(Value ="Post")]
-        Post
+        Post,
+
 
     }
 }

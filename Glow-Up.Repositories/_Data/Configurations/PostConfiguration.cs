@@ -22,6 +22,10 @@ namespace Glow_Up.Repositories._Data.Configurations
                     v => v.ToString(),
                     v => (PostType)Enum.Parse(typeof(PostType), v));
 
+            builder.HasMany(x => x.Reactions)
+                .WithOne(x => x.Post)
+                .OnDelete(DeleteBehavior.NoAction);
+
         }
     }
 }

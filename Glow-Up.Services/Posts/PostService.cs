@@ -173,6 +173,9 @@ namespace Glow_Up.Services.Posts
             // Determine PostType
             post.PostType = (videoCount == 1 && mediaItems.Count == 1) ? PostType.Video : PostType.Post;
 
+            if (dto.Type != null && dto.Type == "Clip" && videoCount == 1 && mediaItems.Count == 1)
+                post.PostType = PostType.Clip;
+
             _unitOfWork.Repository<Post>().Update(post);
             await _unitOfWork.CompleteAsync();
 
@@ -228,7 +231,7 @@ namespace Glow_Up.Services.Posts
             return true;
         }
 
-        public async Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(string? feel = null)
+        public async Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(int userId, string? feel = null)
         {
             ///var spec = new GetPostsSpecification(feel);
             ///
@@ -255,6 +258,16 @@ namespace Glow_Up.Services.Posts
             ///
             ///}).ToList().AsReadOnly();
             ///
+
+            var user = await _unitOfWork.Repository<User>().GetByIdAsync(userId);
+
+            if (user == null)
+                throw new Exception("User not founded!");
+
+            if (feel is not null && feel.Equals("sad", StringComparison.CurrentCultureIgnoreCase))
+                user.IsSad = true;
+            else
+                user.IsSad = false;
 
             var spec = new GetPostsSpecification(feel);
 
@@ -297,6 +310,9 @@ namespace Glow_Up.Services.Posts
                 PostType = sp.Post.PostType.ToString()
 
             }));
+
+            _unitOfWork.Repository<User>().Update(user);
+            await _unitOfWork.CompleteAsync();
 
             return allPosts.OrderByDescending(p => p.PostId).ToList().AsReadOnly();
         }

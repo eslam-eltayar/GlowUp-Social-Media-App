@@ -11,7 +11,7 @@ namespace Glow_Up.Core.Services.Posts
     {
         Task<PostToReturnDto> CreateNewPostAsync(int userId, CreatePostDto dto);
         Task<bool> DeletePostAsync(int postId);
-        Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(string? feel = null);
+        Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(int userId ,string? feel = null);
         Task<bool> AddReactionAsync(int postId, AddReactionDto dto);
         Task<IReadOnlyList<PostToReturnDto>> GetPostsByUserAsync(int userId);
 

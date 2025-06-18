@@ -53,11 +53,11 @@ namespace Glow_Up.APIs.Controllers
 
 
         [HttpGet("GetAllPosts")]
-        public async Task<ActionResult<IReadOnlyList<FeedDto>>> GetAllPosts([FromQuery] string? feel = null)
+        public async Task<ActionResult<IReadOnlyList<FeedDto>>> GetAllPosts([FromQuery] int userId, [FromQuery] string? feel = null)
         {
             try
             {
-                var posts = await _postService.GetAllPostsAsync(feel);
+                var posts = await _postService.GetAllPostsAsync(userId, feel);
 
                 return Ok(posts);
             }

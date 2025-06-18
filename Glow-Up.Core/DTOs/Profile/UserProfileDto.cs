@@ -19,6 +19,7 @@ namespace Glow_Up.Core.DTOs.Profile
         public string Gender { get; set; }
         public string? ProfilePic { get; set; }
         public string? CoverPic { get; set; }
+        public bool IsSad { get; set; }
 
         public int FollowersCount { get; set; } // Number of followers
         public int FollowingCount { get; set; } // Number of users being followed

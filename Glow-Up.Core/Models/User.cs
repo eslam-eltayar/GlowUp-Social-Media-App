@@ -21,6 +21,8 @@ namespace Glow_Up.Core.Models
         public string? ProfilePic { get; set; }
         public string? CoverPic { get; set; }
 
+        public bool IsSad { get; set; } = false;
+
         public ICollection<Post> Posts { get; set; } = new HashSet<Post>();
         public ICollection<Comment> Comments { get; set; } = new HashSet<Comment>();
         public ICollection<Reaction> Reactions { get; set; } = new HashSet<Reaction>();

@@ -116,7 +116,8 @@ namespace Glow_Up.Services.Users
                 Phone = user.Phone,
                 ProfilePic = user.ProfilePic,
                 FollowersCount = followersCount,
-                FollowingCount = followingCount
+                FollowingCount = followingCount,
+                IsSad = user.IsSad,
             };
         }
 

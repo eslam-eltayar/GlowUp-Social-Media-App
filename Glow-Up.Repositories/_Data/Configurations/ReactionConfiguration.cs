@@ -18,7 +18,7 @@ namespace Glow_Up.Repositories._Data.Configurations
             builder.HasOne(r => r.Post)
                 .WithMany(p => p.Reactions)
                 .HasForeignKey(r => r.PostId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.HasOne(r => r.Comment)
                 .WithMany(c => c.Reactions)
