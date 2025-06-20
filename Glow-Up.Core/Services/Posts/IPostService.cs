@@ -14,6 +14,9 @@ namespace Glow_Up.Core.Services.Posts
         Task<IReadOnlyList<FeedDto>> GetAllPostsAsync(int userId ,string? feel = null);
         Task<bool> AddReactionAsync(int postId, AddReactionDto dto);
         Task<IReadOnlyList<PostToReturnDto>> GetPostsByUserAsync(int userId);
+        Task<bool> ReportPostAsync(ReportPostDto dto);
+        Task<IReadOnlyList<ReportPostToReturnDto>> GetReportedPosts();
+        Task<bool> RemoveReportedPost(int postId);
 
         Task<bool> AddFavoritePostAsync(int userId, int postId);
         Task<bool> RemoveFavoritePostAsync(int userId, int postId);

@@ -3,14 +3,16 @@ using Glow_Up.Core.Enums;
 using Glow_Up.Core.Models;
 using Glow_Up.Core.Repositories;
 using Glow_Up.Core.Services.Files;
+using Glow_Up.Core.Services.Logs;
+using Glow_Up.Core.Services.Notifications;
 using Glow_Up.Core.Services.Posts;
+using Glow_Up.Core.Specifications.Comment_Spec;
 using Glow_Up.Core.Specifications.FavPosts_Spec;
 using Glow_Up.Core.Specifications.Post_Spec;
 using Glow_Up.Core.Specifications.SharedPosts_Spec;
 using Glow_Up.Services.Helpers;
 using Microsoft.AspNetCore.Hosting;
-using Glow_Up.Core.Services.Notifications;
-using Glow_Up.Core.Services.Logs;
+using Microsoft.EntityFrameworkCore;
 
 namespace Glow_Up.Services.Posts
 {
@@ -189,20 +191,80 @@ namespace Glow_Up.Services.Posts
 
         }
 
+        //public async Task<bool> DeletePostAsync(int postId)
+        //{
+        //    if (postId <= 0)
+        //        throw new Exception($"Invalid {postId}");
+
+        //    var spec = new PostWithMediaSpecification(postId);
+
+        //    var post = await _unitOfWork.Repository<Post>().GetByIdWithSpecAsync(spec);
+
+        //    if (post == null)
+        //        throw new Exception("Post not founded");
+
+        //    // Delete media files
+
+        //    if (post.MediaItems != null && post.MediaItems.Any())
+        //    {
+        //        foreach (var media in post.MediaItems)
+        //        {
+        //            if (!string.IsNullOrEmpty(media.Url))
+        //            {
+        //                var filePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "posts", media.Url);
+
+        //                filePath = $"wwwroot{filePath}";
+
+        //                if (File.Exists(filePath))
+        //                    File.Delete(filePath);
+        //            }
+        //        }
+        //    }
+
+
+        //    _unitOfWork.Repository<Post>().Delete(post);
+
+        //    int result = await _unitOfWork.CompleteAsync();
+
+        //    if (result <= 0)
+        //        throw new Exception("An error occurred while Deleting post.");
+
+
+        //    return true;
+        //}
+
         public async Task<bool> DeletePostAsync(int postId)
         {
             if (postId <= 0)
                 throw new Exception($"Invalid {postId}");
 
             var spec = new PostWithMediaSpecification(postId);
-
             var post = await _unitOfWork.Repository<Post>().GetByIdWithSpecAsync(spec);
 
             if (post == null)
                 throw new Exception("Post not founded");
 
-            // Delete media files
+            // Delete related reactions
 
+            var reactionSpec = new ReactionsByPostSpecification(postId);
+
+            var reactions = await _unitOfWork.Repository<Reaction>().GetAllWithSpecAsync(reactionSpec);
+            foreach (var reaction in reactions)
+            {
+                _unitOfWork.Repository<Reaction>().Delete(reaction);
+            }
+
+            // Delete related comments (if needed)
+
+            var commentSpec = new CommentsForPostSpecification(postId);
+
+            var comments = await _unitOfWork.Repository<Comment>().GetAllWithSpecAsync(commentSpec);
+            foreach (var comment in comments)
+            {
+                _unitOfWork.Repository<Comment>().Delete(comment);
+            }
+
+            // Delete related media files
             if (post.MediaItems != null && post.MediaItems.Any())
             {
                 foreach (var media in post.MediaItems)
@@ -210,15 +272,13 @@ namespace Glow_Up.Services.Posts
                     if (!string.IsNullOrEmpty(media.Url))
                     {
                         var filePath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "posts", media.Url);
-
                         filePath = $"wwwroot{filePath}";
-
                         if (File.Exists(filePath))
                             File.Delete(filePath);
                     }
+                    _unitOfWork.Repository<Media>().Delete(media);
                 }
             }
-
 
             _unitOfWork.Repository<Post>().Delete(post);
 
@@ -226,7 +286,6 @@ namespace Glow_Up.Services.Posts
 
             if (result <= 0)
                 throw new Exception("An error occurred while Deleting post.");
-
 
             return true;
         }
@@ -316,8 +375,93 @@ namespace Glow_Up.Services.Posts
 
             return allPosts.OrderByDescending(p => p.PostId).ToList().AsReadOnly();
         }
+        public async Task<bool> ReportPostAsync(ReportPostDto dto)
+        {
+            var post = await _unitOfWork.Repository<Post>().GetByIdAsync(dto.PostId);
+            if (post == null)
+                throw new Exception("Post not found.");
+
+            var reporter = await _unitOfWork.Repository<User>().GetByIdAsync(dto.ReporterId);
 
 
+            if (reporter == null)
+                throw new Exception("Reporter not found.");
+
+            var reportIsExists = await _unitOfWork.Repository<ReportPost>()
+                .FirstOrDefaultAsync(rp => rp.PostId == dto.PostId && rp.ReporterId == dto.ReporterId);
+
+            if (reportIsExists != null)
+                {
+                throw new Exception("You have already reported this post.");
+            }
+
+            var report = new ReportPost
+            {
+                PostId = dto.PostId,
+                ReporterId = dto.ReporterId,
+                //Reason = dto.Reason,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _unitOfWork.Repository<ReportPost>().Add(report);
+            int result = await _unitOfWork.CompleteAsync();
+
+            if (result <= 0)
+                throw new Exception("An error occurred while reporting the post.");
+
+            // Optionally: Notify admins or log the report here
+
+            return true;
+        }
+
+        // add method to return reported posts Ids and count of reports on each post return dto with PostId and Count of reports
+
+        public async Task<IReadOnlyList<ReportPostToReturnDto>> GetReportedPosts()
+        {
+            var reportedPosts = await _unitOfWork.Repository<ReportPost>().GetAllAsync();
+
+            var result = reportedPosts
+                .GroupBy(post => post.PostId)
+                .Select(group => new ReportPostToReturnDto
+                {
+                    PostId = group.Key,
+                    ReportsCount = group.Count()
+                })
+                .ToList();
+
+            return result;
+        }
+
+        public async Task<bool> RemoveReportedPost(int postId)
+        {
+            try
+            {
+                var spec = new ReportedPostsSpecification(postId);
+
+                var reportsToRemove = await _unitOfWork.Repository<ReportPost>()
+                    .GetAllWithSpecAsync(spec);
+
+                if (!reportsToRemove.Any())
+                {
+                   throw new Exception("No reports found for this post.");
+                }
+
+                // Remove all reports for this post
+                foreach (var report in reportsToRemove)
+                {
+                    _unitOfWork.Repository<ReportPost>().Delete(report);
+                }
+
+                // Save changes
+                await _unitOfWork.CompleteAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                // Log exception if needed
+                return false;
+            }
+        }
         public async Task<IReadOnlyList<PostToReturnDto>> GetPostsByUserAsync(int userId)
         {
 
@@ -510,6 +654,7 @@ namespace Glow_Up.Services.Posts
             return true;
 
         }
+
 
         public async Task<IReadOnlyList<PostToReturnDto>> GetSharedPostsAsync(int userId)
         {

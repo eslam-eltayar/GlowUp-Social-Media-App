@@ -35,7 +35,7 @@ namespace Glow_Up.APIs.Controllers
         }
 
         [HttpDelete("DeletePost/{postId}")]
-        public async Task<ActionResult<PostToReturnDto>> DeletePost(int postId)
+        public async Task<IActionResult> DeletePost(int postId)
         {
             try
             {
@@ -50,6 +50,50 @@ namespace Glow_Up.APIs.Controllers
             }
         }
 
+        [HttpPost("ReportPost")]
+        public async Task<IActionResult> ReportPost([FromBody] ReportPostDto dto)
+        {
+            try
+            {
+                var result = await _postService.ReportPostAsync(dto);
+                return Ok(new { Message = "Post reported successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        [HttpGet("GetReportedPosts")]
+        public async Task<ActionResult<IReadOnlyList<ReportPostToReturnDto>>> GetReportedPosts()
+        {
+            try
+            {
+                var reportedPosts = await _postService.GetReportedPosts();
+                return Ok(reportedPosts);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
+
+        [HttpDelete("RemoveReportedPost/{postId}")]
+        public async Task<IActionResult> RemoveReportedPost(int postId)
+        {
+            try
+            {
+                var result = await _postService.RemoveReportedPost(postId);
+                if (result)
+                    return Ok(new { Message = "Reported post removed successfully." });
+                else
+                    return BadRequest(new { Message = "Failed to remove reported post." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
 
 
         [HttpGet("GetAllPosts")]

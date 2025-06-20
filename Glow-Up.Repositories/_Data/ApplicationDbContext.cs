@@ -46,6 +46,7 @@ namespace Glow_Up.Repositories._Data
         public DbSet<FavoritePost> FavoritePosts { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<ReportPost> ReportPosts { get; set; }
 
 
         // BlackHat 
